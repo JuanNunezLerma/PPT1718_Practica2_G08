@@ -102,7 +102,7 @@ int main(int *argc, char *argv[])
 				address_size = sizeof(server_in6);
 			}
 
-			estado = S_WELC;
+			estado = S_WELC; //f
 
 			if (connect(sockfd, server_in, address_size) == 0) {
 				printf("CLIENTE> CONEXION ESTABLECIDA CON %s:%d\r\n", ipdest, TCP_SERVICE_PORT);
