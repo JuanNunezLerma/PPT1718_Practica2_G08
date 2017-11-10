@@ -86,7 +86,7 @@ int main(int *argc, char *argv[])
 
 			if (ipversion == AF_INET) {
 				server_in4.sin_family = AF_INET;
-				server_in4.sin_port = htons(TCP_SERVICE_PORT);
+				server_in4.sin_port = htons(SMTP_SERVICE_PORT);
 				//server_in4.sin_addr.s_addr=inet_addr(ipdest);
 				inet_pton(ipversion, ipdest, &server_in4.sin_addr.s_addr);
 				server_in = (struct sockaddr*)&server_in4;
@@ -96,16 +96,16 @@ int main(int *argc, char *argv[])
 			if (ipversion == AF_INET6) {
 				memset(&server_in6, 0, sizeof(server_in6));
 				server_in6.sin6_family = AF_INET6;
-				server_in6.sin6_port = htons(TCP_SERVICE_PORT);
+				server_in6.sin6_port = htons(SMTP_SERVICE_PORT);
 				inet_pton(ipversion, ipdest, &server_in6.sin6_addr);
 				server_in = (struct sockaddr*)&server_in6;
 				address_size = sizeof(server_in6);
 			}
 
-			estado = S_WELC; //f
+			estado = S_WELC; 
 
 			if (connect(sockfd, server_in, address_size) == 0) {
-				printf("CLIENTE> CONEXION ESTABLECIDA CON %s:%d\r\n", ipdest, TCP_SERVICE_PORT);
+				printf("CLIENTE> CONEXION ESTABLECIDA CON %s:%d\r\n", ipdest, SMTP_SERVICE_PORT);
 
 				//Inicio de la máquina de estados
 				do {
@@ -150,28 +150,28 @@ int main(int *argc, char *argv[])
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF);
 						break;
 					case S_DATA:
-						printf("CLIENTE> Introduzca datos (enter o QUIT para salir): ");
+						printf("CLIENTE> Introduzca el asunto del mensaje (enter o QUIT para salir): ");
 						gets_s(input, sizeof(input));
 						if (strlen(input) == 0) {
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
 							estado = S_QUIT;
 						}
 						else
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", ECHO, input, CRLF);
+							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", DATA, input, CRLF);
 						break;
 
 					}
 
 					if (estado != S_WELC) {
 						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
-						if (enviados == SOCKET_ERROR) {
+						if (enviados == SOCKET_ERROR) {//Aqui tambien controla el error
 							estado = S_QUIT;
 							continue;
 						}
 					}
 
 					recibidos = recv(sockfd, buffer_in, 512, 0);
-					if (recibidos <= 0) {
+					if (recibidos <= 0) {//Aqui sirve para controlar los errores de transporte
 						DWORD error = GetLastError();
 						if (recibidos<0) {
 							printf("CLIENTE> Error %d en la recepción de datos\r\n", error);
@@ -183,7 +183,7 @@ int main(int *argc, char *argv[])
 						}
 					}
 					else {
-						buffer_in[recibidos] = 0x00;
+						buffer_in[recibidos] = 0x00;//Esto se añade para que el mensaje no falle ya que en C los datos tienen que terminar en cero.
 						printf(buffer_in);
 						if (estado != S_DATA && strncmp(buffer_in, "2", 1) == 0)
 							estado++;
@@ -193,7 +193,7 @@ int main(int *argc, char *argv[])
 			}
 			else {
 				int error_code = GetLastError();
-				printf("CLIENTE> ERROR AL CONECTAR CON %s:%d\r\n", ipdest, TCP_SERVICE_PORT);
+				printf("CLIENTE> ERROR AL CONECTAR CON %s:%d\r\n", ipdest, SMTP_SERVICE_PORT);
 			}
 			// fin de la conexion de transporte
 			closesocket(sockfd);

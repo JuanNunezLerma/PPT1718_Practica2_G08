@@ -5,8 +5,10 @@
 // COMANDOS DE APLICACION
 #define HELO "HELO"  // SOLICITUD DE CONEXION USER usuario 
 #define MF "MAIL FROM:"
+#define RCPT "RCPT TO:"
 #define PW "PASS"  // Password del usuario  PASS password
 #define SC "USER"
+#define DATA "DATA"
 
 #define SD  "QUIT"  // Finalizacion de la conexion de aplicacion
 //#define SD2 "EXIT"  // Finalizacion de la conexion de aplicacion 
@@ -31,7 +33,7 @@
 #define S_EXIT 6
 
 //PUERTO DEL SERVICIO
-#define TCP_SERVICE_PORT	25
+#define SMTP_SERVICE_PORT	25
 
 // NOMBRE Y PASSWORD AUTORIZADOS
 #define USER		"alumno"
