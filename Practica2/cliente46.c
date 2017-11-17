@@ -88,18 +88,15 @@ int main(int *argc, char *argv[])
 					struct hostent *host;
 					host = gethostbyname(ipdest);
 					if (host != NULL) {
-						flag = 0;
+						flag = 0; //Si el dominio resuelve debe salirse, ya que existe.
 						memcpy(&address, host->h_addr_list[0], 4);
 						printf("\nDireccion %s\n", inet_ntoa(address));
 					}
 					else {
-						flag = 1;
+						flag = 1; //Si no resuelve vuelve a pedirnos la introduccion de la dirección o dominio.
 					}
 				}
 			} while (flag == 1);
-
-			/*printf("CLIENTE> Introduzca la IP destino (pulsar enter para IP por defecto): ");
-			gets_s(ipdest, sizeof(ipdest));*/
 
 			//Dirección por defecto según la familia
 			if (strcmp(ipdest, "") == 0 && ipversion == AF_INET)
@@ -140,57 +137,55 @@ int main(int *argc, char *argv[])
 					case S_HELO:
 						// establece la conexion de aplicacion 
 						printf("Bienvenido al servicio de correo electronico");
-						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", HELO, ipdest, CRLF);
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", HELO, ipdest, CRLF); //Mandamos el comando HELO al servidor de correo
 						break;
 					case S_MF:
 						printf("Introduzca el REMITENTE (enter para salir): ");
-						gets_s(input, sizeof(input));
+						gets_s(input, sizeof(input)); //Guardamos el remitente.
 						//strcpy(rmt,input);
-						if (strlen(input) == 0) {
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
+						if (strlen(input) == 0) { //Si pulsa enter, sale.
+							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF); 
 							estado = S_QUIT;
 						}
 						else
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", MF, input, CRLF);
-						//estado++;
-						//sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", PW, input, CRLF);
+							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", MF, input, CRLF); //Enviamos el remitente formateado.
 						break;
 					case S_RCPT:
 						printf("Introduzca el DESTINATARIO (enter para salir): ");
-						gets_s(input, sizeof(input));
-						if (strlen(input) == 0) {
+						gets_s(input, sizeof(input)); //Guardamos el destinatario.
+						if (strlen(input) == 0) { //Si pulsa enter, sale.
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
 							estado = S_QUIT;
 						}
 						else
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF);
+							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF); //Enviamos el destinatario formateado.
 						break;
-					case S_DATA:
-						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", DATA, CRLF);
-						estado++;
+					case S_DATA: //caso para entrar en la escritura del mensaje.
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", DATA, CRLF); //Mandamos el comando DATA.
+						estado++; //Cambio de estado.
 						break;
-					case S_ENVIA:					
+					case S_ENVIA: //Empezamos a formatear cabeceras y cuerpo del mensaje
 						printf("Introduzca el ASUNTO del mensaje: ");					
-						gets_s(input, sizeof(input));
-						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", SUBJECT, input, CRLF);
-						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+						gets_s(input, sizeof(input)); //Guardamos asunto.
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", SUBJECT, input, CRLF); //Asunto formateado.
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0); //Envio Asunto.
 
 						printf("Introduzca el NOMBRE del REMITENTE del correo: ");
-						gets_s(input, sizeof(input));
-						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", RMT, input, CRLF);
-						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+						gets_s(input, sizeof(input)); //Guardamos remitente
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", RMT, input, CRLF); //Remitente formateado.
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0); //Envio remitente
 
 						printf("Introduzca el NOMBRE del DESTINATARIO del correo: ");
-						gets_s(input, sizeof(input));
-						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s%s", TO, input, CRLF, CRLF);
-						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+						gets_s(input, sizeof(input)); //Nombre del destinatario.
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s%s", TO, input, CRLF, CRLF); //Nombre formateado.
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0); //Envio nombre.
 
 						printf("Introduzca el CUERPO del mensaje (. y enter para acabar la redaccion): ");
-						gets_s(input, sizeof(input));
-						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", input, CRLF);
-						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+						gets_s(input, sizeof(input)); //Empieza el cuerpo del mensaje.
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", input, CRLF); //Cuerpo formateado.
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0); //Envio cuerpo.
 
-						while (strcmp(input, ".") != 0) {
+						while (strcmp(input, ".") != 0) { //El cuerpo se va mandando hasta el momento que escriba un punto. Al escribir un punto solo, sale y termina.
 							gets_s(input, sizeof(input));
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", input, CRLF);	
 							enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
@@ -198,15 +193,16 @@ int main(int *argc, char *argv[])
 
 						printf("¿Deseas enviar otro correo? SI (S/s) / NO (Pulsa cualquier tecla): ");
 						gets_s(input, sizeof(input));
-						if ((strcmp(input,"s")==0) || (strcmp(input, "S") == 0)){
+						if ((strcmp(input,"s")==0) || (strcmp(input, "S") == 0)){ //Si introduce opción de enviar otro correo vuelve al estado inicial sin salir.
 							estado = S_WELC;
 						}	
 						break;
 					}
 
 					if (estado != S_WELC) {
-
-						if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") == 0) || (strcmp(buffer_out, "RCPT TO:RSET\r\n") == 0)) {
+						//Soporte para el comando RESET
+						if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") == 0) || (strcmp(buffer_out, "RCPT TO:RSET\r\n") == 0)) { //Comprobamos que lo que ha introducido no sea RSET. Al venir formateado
+							//le añadimos el formato. En caso de que sea, vuelve al estado inicial.
 							estado = S_WELC;
 						}
 						else {
@@ -219,7 +215,7 @@ int main(int *argc, char *argv[])
 						}
 					}
 
-					if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") != 0) && (strcmp(buffer_out, "RCPT TO:RSET\r\n") != 0)) {
+					if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") != 0) && (strcmp(buffer_out, "RCPT TO:RSET\r\n") != 0)) { //Se añade comprobación para el comando RSET, ya que en ese caso, no recibe nada.
 						recibidos = recv(sockfd, buffer_in, 512, 0);
 					}
 					if (recibidos <= 0) {//Aqui sirve para controlar los errores de transporte
