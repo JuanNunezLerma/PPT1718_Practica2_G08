@@ -26,15 +26,18 @@ int main(int *argc, char *argv[])
 	struct sockaddr *server_in;
 	struct sockaddr_in server_in4;
 	struct sockaddr_in6 server_in6;
+	struct in_addr address;
 	int address_size = sizeof(server_in4);
-	char buffer_in[1024], buffer_out[1024], input[1024], rmt[1024], dest[1024];
+	char buffer_in[1024], buffer_out[1024], input[1024];
 	int recibidos = 0, enviados = 0;
 	int estado = S_WELC;
 	char option;
 	int ipversion = AF_INET;//IPv4 por defecto
 	char ipdest[256];
+	char ipdestl;
 	char default_ip4[16] = "127.0.0.1";
 	char default_ip6[64] = "::1";
+	boolean flag = 0; //Variable bandera para controlar la parte de los dominios
 
 	WORD wVersionRequested;
 	WSADATA wsaData;
@@ -74,8 +77,29 @@ int main(int *argc, char *argv[])
 			exit(-1);
 		}
 		else {
-			printf("CLIENTE> Introduzca la IP destino (pulsar enter para IP por defecto): ");
-			gets_s(ipdest, sizeof(ipdest));
+			do { //while para mantenernos en el bucle en caso de que el dominio no exista o no se haya introducido.
+				printf("Introduzca la direccion IP o el dominio destino: ");
+				gets(ipdest);
+
+				ipdestl = inet_addr(ipdest);
+				if (ipdestl == INADDR_NONE) {
+					//La dirección introducida por teclado no es correcta o
+					//corresponde con un dominio.
+					struct hostent *host;
+					host = gethostbyname(ipdest);
+					if (host != NULL) {
+						flag = 0;
+						memcpy(&address, host->h_addr_list[0], 4);
+						printf("\nDireccion %s\n", inet_ntoa(address));
+					}
+					else {
+						flag = 1;
+					}
+				}
+			} while (flag == 1);
+
+			/*printf("CLIENTE> Introduzca la IP destino (pulsar enter para IP por defecto): ");
+			gets_s(ipdest, sizeof(ipdest));*/
 
 			//Dirección por defecto según la familia
 			if (strcmp(ipdest, "") == 0 && ipversion == AF_INET)
@@ -111,22 +135,15 @@ int main(int *argc, char *argv[])
 				do {
 					switch (estado) {
 					case S_WELC:
-						
 						// Se recibe el mensaje de bienvenida
 						break;
 					case S_HELO:
 						// establece la conexion de aplicacion 
-						printf("CLIENTE> Introduzca su host (enter para salir): ");
-						gets_s(input, sizeof(input));
-						if (strlen(input) == 0) {
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
-							estado = S_QUIT;
-						}
-						else
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", HELO, input, CRLF);
+						printf("Bienvenido al servicio de correo electronico");
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", HELO, ipdest, CRLF);
 						break;
 					case S_MF:
-						printf("CLIENTE> Introduzca el remitente (enter para salir): ");
+						printf("Introduzca el REMITENTE (enter para salir): ");
 						gets_s(input, sizeof(input));
 						//strcpy(rmt,input);
 						if (strlen(input) == 0) {
@@ -135,13 +152,12 @@ int main(int *argc, char *argv[])
 						}
 						else
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", MF, input, CRLF);
-							//estado++;
-							//sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", PW, input, CRLF);
+						//estado++;
+						//sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", PW, input, CRLF);
 						break;
 					case S_RCPT:
-						printf("CLIENTE> Introduzca el destinatario (enter para salir): ");
+						printf("Introduzca el DESTINATARIO (enter para salir): ");
 						gets_s(input, sizeof(input));
-						strcpy(dest, input);
 						if (strlen(input) == 0) {
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
 							estado = S_QUIT;
@@ -150,27 +166,62 @@ int main(int *argc, char *argv[])
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF);
 						break;
 					case S_DATA:
-						printf("CLIENTE> Introduzca el asunto del mensaje (enter o QUIT para salir): ");
-						gets_s(input, sizeof(input));
-						if (strlen(input) == 0) {
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
-							estado = S_QUIT;
-						}
-						else
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", DATA, input, CRLF);
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", DATA, CRLF);
+						estado++;
 						break;
+					case S_ENVIA:					
+						printf("Introduzca el ASUNTO del mensaje: ");					
+						gets_s(input, sizeof(input));
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", SUBJECT, input, CRLF);
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
 
+						printf("Introduzca el NOMBRE del REMITENTE del correo: ");
+						gets_s(input, sizeof(input));
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s", RMT, input, CRLF);
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+
+						printf("Introduzca el NOMBRE del DESTINATARIO del correo: ");
+						gets_s(input, sizeof(input));
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s %s%s%s", TO, input, CRLF, CRLF);
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+
+						printf("Introduzca el CUERPO del mensaje (. y enter para acabar la redaccion): ");
+						gets_s(input, sizeof(input));
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", input, CRLF);
+						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+
+						while (strcmp(input, ".") != 0) {
+							gets_s(input, sizeof(input));
+							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", input, CRLF);	
+							enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+						}
+
+						printf("¿Deseas enviar otro correo? SI (S/s) / NO (Pulsa cualquier tecla): ");
+						gets_s(input, sizeof(input));
+						if ((strcmp(input,"s")==0) || (strcmp(input, "S") == 0)){
+							estado = S_WELC;
+						}	
+						break;
 					}
 
 					if (estado != S_WELC) {
-						enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+
+						if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") == 0) || (strcmp(buffer_out, "RCPT TO:RSET\r\n") == 0)) {
+							estado = S_WELC;
+						}
+						else {
+							enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+						}
+
 						if (enviados == SOCKET_ERROR) {//Aqui tambien controla el error
 							estado = S_QUIT;
 							continue;
 						}
 					}
 
-					recibidos = recv(sockfd, buffer_in, 512, 0);
+					if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") != 0) && (strcmp(buffer_out, "RCPT TO:RSET\r\n") != 0)) {
+						recibidos = recv(sockfd, buffer_in, 512, 0);
+					}
 					if (recibidos <= 0) {//Aqui sirve para controlar los errores de transporte
 						DWORD error = GetLastError();
 						if (recibidos<0) {

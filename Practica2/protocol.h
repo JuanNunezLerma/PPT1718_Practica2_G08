@@ -9,6 +9,9 @@
 #define PW "PASS"  // Password del usuario  PASS password
 #define SC "USER"
 #define DATA "DATA"
+#define SUBJECT "SUBJECT:"
+#define RMT "FROM:"
+#define TO "TO:"
 
 #define SD  "QUIT"  // Finalizacion de la conexion de aplicacion
 //#define SD2 "EXIT"  // Finalizacion de la conexion de aplicacion 
@@ -29,8 +32,9 @@
 #define S_MF 2
 #define S_RCPT 3
 #define S_DATA 4
-#define S_QUIT 5
-#define S_EXIT 6
+#define S_ENVIA 5
+#define S_QUIT 6
+#define S_EXIT 7
 
 //PUERTO DEL SERVICIO
 #define SMTP_SERVICE_PORT	25
