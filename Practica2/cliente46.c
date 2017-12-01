@@ -101,9 +101,13 @@ int main(int *argc, char *argv[])
 			//Dirección por defecto según la familia
 			if (strcmp(ipdest, "") == 0 && ipversion == AF_INET)
 				strcpy_s(ipdest, sizeof(ipdest), default_ip4);
+			else
+				strcpy_s(ipdest, sizeof(ipdest), inet_ntoa(address));//Si no es la de por defecto, copiamos la que ha resuelto en ipdest.
 
 			if (strcmp(ipdest, "") == 0 && ipversion == AF_INET6)
 				strcpy_s(ipdest, sizeof(ipdest), default_ip6);
+			else
+				strcpy_s(ipdest, sizeof(ipdest), inet_ntoa(address));//Si no es la de por defecto, copiamos la que ha resuelto en ipdest.
 
 			if (ipversion == AF_INET) {
 				server_in4.sin_family = AF_INET;
