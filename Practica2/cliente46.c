@@ -37,7 +37,7 @@ int main(int *argc, char *argv[])
 	char ipdestl;
 	char default_ip4[16] = "127.0.0.1";
 	char default_ip6[64] = "::1";
-	boolean flag = 0; //Variable bandera para controlar la parte de los dominios
+	boolean flag = 0, flagDest = 0; //Variable bandera para controlar la parte de los dominios
 
 	WORD wVersionRequested;
 	WSADATA wsaData;
@@ -148,21 +148,33 @@ int main(int *argc, char *argv[])
 						gets_s(input, sizeof(input)); //Guardamos el remitente.
 						//strcpy(rmt,input);
 						if (strlen(input) == 0) { //Si pulsa enter, sale.
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF); 
+							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
 							estado = S_QUIT;
 						}
 						else
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", MF, input, CRLF); //Enviamos el remitente formateado.
 						break;
 					case S_RCPT:
-						printf("Introduzca el DESTINATARIO (enter para salir): ");
-						gets_s(input, sizeof(input)); //Guardamos el destinatario.
-						if (strlen(input) == 0) { //Si pulsa enter, sale.
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
-							estado = S_QUIT;
-						}
-						else
-							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF); //Enviamos el destinatario formateado.
+						do {
+							printf("Introduzca el DESTINATARIO (enter para salir): ");
+							gets_s(input, sizeof(input)); //Guardamos el destinatario.
+							if (strlen(input) == 0) { //Si pulsa enter, sale.
+								sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
+								estado = S_QUIT;
+							}
+							else {
+								sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF); //Enviamos el destinatario formateado.
+								enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
+							}
+							printf("¿Desea enviar el email a otro destinatario? SI (S/s) / NO (Pulsa cualquier tecla): ");
+							gets_s(input, sizeof(input));
+							if ((strcmp(input, "s") == 0) || (strcmp(input, "S") == 0)) { //Si introduce opción de enviar el email a otro destinatario volvemos al bucle.
+								flagDest = 1;
+							}
+							else {
+								flagDest = 0;
+							}
+						}while (flagDest == 1);
 						break;
 					case S_DATA: //caso para entrar en la escritura del mensaje.
 						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", DATA, CRLF); //Mandamos el comando DATA.
@@ -203,8 +215,8 @@ int main(int *argc, char *argv[])
 						break;
 					}
 
-					if (estado != S_WELC) {
-						//Soporte para el comando RESET
+					if (estado != S_WELC && estado != S_RCPT) { //Se ha añadido la parte de que sea distinto del estado S_RCPT, para conseguir enviar varios destinatarios, concatenados. El envío se realiza
+					//en el estado S_RCPT	//Soporte para el comando RESET
 						if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") == 0) || (strcmp(buffer_out, "RCPT TO:RSET\r\n") == 0)) { //Comprobamos que lo que ha introducido no sea RSET. Al venir formateado
 							//le añadimos el formato. En caso de que sea, vuelve al estado inicial.
 							estado = S_WELC;
