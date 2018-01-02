@@ -12,6 +12,7 @@
 #define SUBJECT "SUBJECT:"
 #define RMT "FROM:"
 #define TO "TO:"
+#define RSET "RSET"
 
 #define SD  "QUIT"  // Finalizacion de la conexion de aplicacion
 //#define SD2 "EXIT"  // Finalizacion de la conexion de aplicacion 
@@ -35,6 +36,7 @@
 #define S_ENVIA 5
 #define S_QUIT 6
 #define S_EXIT 7
+#define S_RSET 8
 
 //PUERTO DEL SERVICIO
 #define SMTP_SERVICE_PORT	25

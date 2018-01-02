@@ -79,7 +79,7 @@ int main(int *argc, char *argv[])
 		else {
 			do { //while para mantenernos en el bucle en caso de que el dominio no exista o no se haya introducido.
 				printf("Introduzca la direccion IP o el dominio destino: ");
-				gets(ipdest);
+				gets(ipdest, sizeof(ipdest));
 
 				ipdestl = inet_addr(ipdest);
 				if (ipdestl == INADDR_NONE) {
@@ -95,20 +95,21 @@ int main(int *argc, char *argv[])
 					else {
 						flag = 1; //Si no resuelve vuelve a pedirnos la introduccion de la dirección o dominio.
 					}
+					strcpy_s(ipdest, sizeof(ipdest), inet_ntoa(address));
 				}
 			} while (flag == 1);
 
 			//Dirección por defecto según la familia
 			if (strcmp(ipdest, "") == 0 && ipversion == AF_INET)
 				strcpy_s(ipdest, sizeof(ipdest), default_ip4);
-			else
+			/*else
 				strcpy_s(ipdest, sizeof(ipdest), inet_ntoa(address));//Si no es la de por defecto, copiamos la que ha resuelto en ipdest.
-
+				*/
 			if (strcmp(ipdest, "") == 0 && ipversion == AF_INET6)
 				strcpy_s(ipdest, sizeof(ipdest), default_ip6);
-			else
+			/*else
 				strcpy_s(ipdest, sizeof(ipdest), inet_ntoa(address));//Si no es la de por defecto, copiamos la que ha resuelto en ipdest.
-
+*/
 			if (ipversion == AF_INET) {
 				server_in4.sin_family = AF_INET;
 				server_in4.sin_port = htons(SMTP_SERVICE_PORT);
@@ -151,6 +152,10 @@ int main(int *argc, char *argv[])
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
 							estado = S_QUIT;
 						}
+						else if ((strcmp(input, "RSET") == 0)) {
+						sprintf_s(buffer_out, sizeof(buffer_out), "RSET%s", CRLF);
+							estado = S_RSET;
+						}
 						else
 							sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", MF, input, CRLF); //Enviamos el remitente formateado.
 						break;
@@ -162,12 +167,18 @@ int main(int *argc, char *argv[])
 								sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", SD, CRLF);
 								estado = S_QUIT;
 							}
+							else if ((strcmp(input, "RSET") == 0)) {
+								sprintf_s(buffer_out, sizeof(buffer_out), "RSET%s", CRLF);
+								estado = S_RSET;
+							}
 							else {
 								sprintf_s(buffer_out, sizeof(buffer_out), "%s%s%s", RCPT, input, CRLF); //Enviamos el destinatario formateado.
 								enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
 							}
-							printf("¿Desea enviar el email a otro destinatario? SI (S/s) / NO (Pulsa cualquier tecla): ");
-							gets_s(input, sizeof(input));
+							if ((strcmp(input, "RSET") != 0)) {
+								printf("¿Desea enviar el email a otro destinatario? SI (S/s) / NO (Pulsa cualquier tecla): ");
+								gets_s(input, sizeof(input));
+							}
 							if ((strcmp(input, "s") == 0) || (strcmp(input, "S") == 0)) { //Si introduce opción de enviar el email a otro destinatario volvemos al bucle.
 								flagDest = 1;
 							}
@@ -213,17 +224,17 @@ int main(int *argc, char *argv[])
 							estado = S_WELC;
 						}	
 						break;
+					case S_RSET:
+						estado = S_HELO;
+						sprintf_s(buffer_out, sizeof(buffer_out), "%s%s", "HELO", CRLF);
+						break;
 					}
 
 					if (estado != S_WELC && estado != S_RCPT) { //Se ha añadido la parte de que sea distinto del estado S_RCPT, para conseguir enviar varios destinatarios, concatenados. El envío se realiza
 					//en el estado S_RCPT	//Soporte para el comando RESET
-						if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") == 0) || (strcmp(buffer_out, "RCPT TO:RSET\r\n") == 0)) { //Comprobamos que lo que ha introducido no sea RSET. Al venir formateado
-							//le añadimos el formato. En caso de que sea, vuelve al estado inicial.
-							estado = S_WELC;
-						}
-						else {
+
 							enviados = send(sockfd, buffer_out, (int)strlen(buffer_out), 0);
-						}
+						
 
 						if (enviados == SOCKET_ERROR) {//Aqui tambien controla el error
 							estado = S_QUIT;
@@ -231,9 +242,9 @@ int main(int *argc, char *argv[])
 						}
 					}
 
-					if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") != 0) && (strcmp(buffer_out, "RCPT TO:RSET\r\n") != 0)) { //Se añade comprobación para el comando RSET, ya que en ese caso, no recibe nada.
-						recibidos = recv(sockfd, buffer_in, 512, 0);
-					}
+					/*if ((strcmp(buffer_out, "MAIL FROM:RSET\r\n") != 0) && (strcmp(buffer_out, "RCPT TO:RSET\r\n") != 0)) { //Se añade comprobación para el comando RSET, ya que en ese caso, no recibe nada.
+						*/recibidos = recv(sockfd, buffer_in, 512, 0);
+					/*}*/
 					if (recibidos <= 0) {//Aqui sirve para controlar los errores de transporte
 						DWORD error = GetLastError();
 						if (recibidos<0) {
@@ -248,7 +259,7 @@ int main(int *argc, char *argv[])
 					else {
 						buffer_in[recibidos] = 0x00;//Esto se añade para que el mensaje no falle ya que en C los datos tienen que terminar en cero.
 						printf(buffer_in);
-						if (estado != S_DATA && strncmp(buffer_in, "2", 1) == 0)
+						if (estado != S_DATA && estado!= S_RSET && strncmp(buffer_in, "2", 1) == 0)
 							estado++;
 					}
 
